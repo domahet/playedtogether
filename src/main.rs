@@ -1,222 +1,87 @@
-use riven::consts::RegionalRoute;
+use clap::{CommandFactory, Parser};
 use riven::RiotApi;
-use std::env;
 use std::error::Error;
-use std::time::SystemTime;
-use std::time::UNIX_EPOCH;
-use unicode_width::UnicodeWidthStr;
+use std::env;
+use riven::consts::RegionalRoute; // Keep this import for the final RegionalRoute type
+
+// Declare our modules
+mod cli;
+mod config;
+mod riot_id;
+mod api_client;
+mod utils;
+
+use cli::Cli; // <-- Import UserFacingRegion
+use config::Config;
+use riot_id::RiotId;
+use api_client::run_query;
 
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
-    // 1. Read the API key from an environment variable at RUNTIME.
+    let mut config = Config::load()?;
+    let cli = Cli::parse();
+
+    // Handle --self flag
+    if let Some(riot_id_to_store) = cli.set_self {
+        config.self_riot_id = Some(riot_id_to_store.clone().into());
+        config.save()?;
+        println!("Stored '{}' as your self Riot ID.", riot_id_to_store);
+        return Ok(());
+    }
+
+    let player1_riot_id: RiotId;
+    let player2_riot_id: RiotId;
+
+    match cli.riot_ids.len() {
+        0 => {
+            // No arguments: print help text
+            Cli::command().print_help()?;
+            return Ok(());
+        }
+        1 => {
+            // One argument: use stored self_riot_id as player1, provided arg as player2
+            if let Some(self_id_stored) = config.self_riot_id.map(RiotId::from) {
+                player1_riot_id = self_id_stored;
+                player2_riot_id = cli.riot_ids[0].clone();
+            } else {
+                eprintln!("Error: No 'self' Riot ID stored. Please set it using `--self <RIOT_ID>` or provide two Riot IDs as arguments.");
+                Cli::command().print_help()?;
+                return Err("Missing 'self' Riot ID".into());
+            }
+        }
+        2 => {
+            // Two arguments: use provided args as player1 and player2
+            player1_riot_id = cli.riot_ids[0].clone();
+            player2_riot_id = cli.riot_ids[1].clone();
+        }
+        _ => {
+            // Should not happen due to num_args = 0..=2, but good for completeness
+            Cli::command().print_help()?;
+            return Ok(());
+        }
+    }
+
+    // Determine the regional route with the new fallback logic and conversion
+    let regional_route = cli.region
+                            .map(|r| r.to_regional_route()) // Convert if --region is provided
+                            .or(cli.default_region.map(|r| r.to_regional_route())) // Convert if --default-region is provided
+                            .unwrap_or(RegionalRoute::EUROPE); // Ultimate fallback
+
+    // Read the API key from an environment variable at RUNTIME.
     let api_key = env::var("RGAPI_KEY")
         .expect("RGAPI_KEY environment variable not found. Please set it.");
     let riot_api = RiotApi::new(api_key);
 
-    // --- Player 1 (the one whose match history we will iterate) ---
-    let player1_game_name = "MainingYourMom"; // Replace with actual game name
-    let player1_tag_line = "4444";       // Replace with actual tag line
-    let player1_regional_route = RegionalRoute::EUROPE; // Or EUROPE, ASIA etc.
-
-    // --- Player 2 (the one we are checking for) ---
-    let player2_game_name = "Piciúr"; // Replace with actual game name
-    let player2_tag_line = "ontop";       // Replace with actual tag line
-    let player2_regional_route = RegionalRoute::EUROPE; // Must be the same regional route as player 1
-
-    // 1. Get PUUIDs for both players
-    println!(
-        "Fetching PUUID for {}#{}",
-        player1_game_name, player1_tag_line
-    );
-    let account1 = riot_api
-        .account_v1()
-        .get_by_riot_id(player1_regional_route, player1_game_name, player1_tag_line)
-        .await?
-        .expect("Player 1 Riot ID not found.");
-    let puuid1 = &account1.puuid;
-    println!("Player 1 PUUID: {}", puuid1);
-
-    println!(
-        "Fetching PUUID for {}#{}",
-        player2_game_name, player2_tag_line
-    );
-    let account2 = riot_api
-        .account_v1()
-        .get_by_riot_id(player2_regional_route, player2_game_name, player2_tag_line)
-        .await?
-        .expect("Player 2 Riot ID not found.");
-    let puuid2 = &account2.puuid;
-    println!("Player 2 PUUID: {}", puuid2);
-
-    // Ensure they are on the same regional route for match history lookup consistency
-    if player1_regional_route != player2_regional_route {
-        eprintln!("Warning: Players are on different regional routes. Match history search may be inconsistent or fail.");
-        // Depending on your logic, you might want to exit here or handle this differently.
-    }
-
-
-    // 2. Get a list of recent match IDs for Player 1
-    // We'll limit to the last 100 matches to stay within typical API caps and avoid long runtimes.
-    // The `count` parameter limits the number of matches returned (max 100 per call).
-    // The `start_time` parameter is useful for limiting the search to recent games
-    // (matches list started storing timestamps on June 16, 2021).
-    let one_month_ago = SystemTime::now()
-        .checked_sub(std::time::Duration::from_secs(30 * 24 * 60 * 60)) // Approx 30 days
-        .map(|t| t.duration_since(UNIX_EPOCH).unwrap().as_secs() as i64);
-
-    println!(
-        "Fetching match IDs for Player 1 (last 100 matches, roughly last 30 days if available)..."
-    );
-    let match_ids = riot_api
-        .match_v5()
-        .get_match_ids_by_puuid(
-            player1_regional_route,
-            puuid1,
-            Some(100), // Max number of matches to retrieve
-            None,      // end_time: None (up to now)
-            None,      // queue: None (any queue type)
-            one_month_ago, // start_time: roughly a month ago
-            None,      // start: None (start from beginning of list)
-            None,      // type: None (any match type)
-        )
-        .await?;
-
-    if match_ids.is_empty() {
-        println!("No recent matches found for {}#{}", player1_game_name, player1_tag_line);
-        return Ok(());
-    }
-
-    println!("Found {} recent matches for Player 1.", match_ids.len());
-
-    let mut found_together = false;
-    let mut checked_matches = 0;
-
-    // 3. For each match ID, retrieve the full match details
-    for match_id in match_ids {
-        checked_matches += 1;
-        println!("Checking match {} ({} of {})...", match_id, checked_matches, 100);
-
-        let match_data_option = riot_api
-            .match_v5()
-            .get_match(player1_regional_route, &match_id) // Use the same regional route as match_ids
-            .await?; // Use ? to propagate network/API errors, but allows Option to be handled
-
-        if let Some(match_data) = match_data_option {
-            // 4. Check if the second player's PUUID is among the participants
-            let info = match_data.info;
-            let participants_puuids: Vec<&str> =
-                info.participants.iter().map(|p| p.puuid.as_str()).collect();
-
-            if participants_puuids.contains(&puuid2.as_str()) {
-                    // Initialize a Vec<String> to hold each line
-            let mut lines_of_text: Vec<String> = Vec::new();
-
-            // Line 1: Players and Match ID
-            lines_of_text.push(format!(
-                "Players {}#{} and {}#{} played together in Match ID: {}",
-                player1_game_name, player1_tag_line,
-                player2_game_name, player2_tag_line,
-                match_id
-            ));
-
-            // Line 2: Game Mode and Game Type
-            lines_of_text.push(format!(
-                "Game Mode: {:?}, Game Type: {:?}",
-                info.game_mode, info.game_type
-            ));
-
-            if let Some((_region_id, stripped_match_id)) = match_id.split_once('_'){
-                lines_of_text.push(format!(
-                    "https://www.leagueofgraphs.com/match/EUNE/{}", 
-                    stripped_match_id
-                ));
-            }
-            
-            // Find participant data for Player 1
-            let player1_participant = info.participants.iter()
-                .find(|p| p.puuid == *puuid1);
-
-            // Find participant data for Player 2
-            let player2_participant = info.participants.iter()
-                .find(|p| p.puuid == *puuid2);
-
-            if let (Some(p1_data), Some(p2_data)) = (player1_participant, player2_participant) {
-                // Participant Details Header
-                lines_of_text.push("--- Participant Details ---".to_string());
-
-                // Player 1 Details
-                lines_of_text.push(format!("{}:", player1_game_name));
-                lines_of_text.push(format!("  Champion: {}", p1_data.champion_name));
-                lines_of_text.push(format!("  Role: {}", p1_data.team_position));
-                lines_of_text.push(format!("  KDA: {}/{}/{}", p1_data.kills, p1_data.deaths, p1_data.assists));
-
-                // Player 2 Details
-                lines_of_text.push(format!("{}:", player2_game_name));
-                lines_of_text.push(format!("  Champion: {}", p2_data.champion_name));
-                lines_of_text.push(format!("  Role: {}", p2_data.team_position));
-                lines_of_text.push(format!("  KDA: {}/{}/{}", p2_data.kills, p2_data.deaths, p2_data.assists));
-
-                // Match Outcome Header
-                lines_of_text.push("--- Match Outcome ---".to_string());
-                // Match Outcome Detail
-                lines_of_text.push(format!("  Won the game?: {}", if p2_data.win { "YES" } else { "NO" }));
-
-                // Print the lines in a box
-                if !lines_of_text.is_empty() {
-                    print_in_box(&lines_of_text.iter().map(String::as_str).collect::<Vec<&str>>());
-                } else {
-                    println!("No detailed information available for this match.");
-
-                println!("\n")
-    }
-                } else {
-                    eprintln!("Error: Could not find participant data for one or both players in match {}.", match_id);
-                }
-
-
-                found_together = true;
-                // If you only need to find one game, you can break here
-                // break;
-            }
-            
-        } else {
-            eprintln!("Warning: Match {} not found or accessible.", match_id);
-        }
-    }
-
-    if !found_together {
-        println!("{}#{} and {}#{} do not appear to have played together in the last {} matches checked.",
-            player1_game_name, player1_tag_line,
-            player2_game_name, player2_tag_line,
-            checked_matches
-        );
-    }
+    // Call the modularized API logic
+    run_query(
+        &riot_api,
+        player1_riot_id,
+        player2_riot_id,
+        regional_route,
+        cli.verbose,
+        cli.silent,
+    ).await?;
 
     Ok(())
-}
-
-fn print_in_box(lines: &[&str]) {
-    // Calculate the maximum line width in terms of displayed columns
-    let max_len = lines.iter()
-                       .map(|s| s.width()) // Use .width() from unicode_width
-                       .max()
-                       .unwrap_or(0);
-
-    // Determine box width (2 for padding + 2 for borders)
-    let box_width = max_len + 4; // Still +4 for borders and internal spaces
-
-    // Print the top border
-    let horizontal_border = format!(" {} ", "-".repeat(box_width - 2));
-    println!("{}", horizontal_border);
-
-    // Print each line, padded and enclosed
-    for line in lines {
-        let current_width = line.width(); // Use .width() for the current line
-        let padding = max_len - current_width;
-        println!("| {} {} |", line, " ".repeat(padding));
-    }
-
-    // Print the bottom border
-    println!("{}", horizontal_border);
 }
