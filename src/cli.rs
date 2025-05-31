@@ -3,7 +3,6 @@ use crate::riot_id::RiotId;
 use riven::consts::RegionalRoute;
 
 
-/// Represents the user-facing regional routes
 #[derive(Debug, Clone)]
 pub enum UserFacingRegion {
     BR,
@@ -49,7 +48,6 @@ impl std::str::FromStr for UserFacingRegion {
 }
 
 impl UserFacingRegion {
-    /// Converts a UserFacingRegion to the corresponding riven::consts::RegionalRoute.
     pub fn to_regional_route(&self) -> RegionalRoute {
         match self {
             UserFacingRegion::BR => RegionalRoute::AMERICAS,
@@ -70,7 +68,6 @@ impl UserFacingRegion {
         }
     }
 
-    /// Converts UserFacingRegion to its lowercase string representation for League of Graphs links.
     pub fn to_log_string(&self) -> &'static str {
         match self {
             UserFacingRegion::BR => "br",
@@ -102,7 +99,7 @@ impl UserFacingRegion {
                   You can specify Riot IDs directly, set a default 'self' ID, and control output verbosity."
 )]
 pub struct Cli {
-    /// Sets the "self" Riot ID for subsequent calls (e.g., MainingYourMom#4444)
+    /// Sets the "self" Riot ID for subsequent calls (e.g., InGameName#GamerTag)
     #[clap(long = "self", value_name = "RIOT_ID")]
     pub set_self: Option<RiotId>,
 
@@ -135,15 +132,15 @@ pub struct Cli {
     pub default_region: Option<UserFacingRegion>,
 
     /// Number of most recent games to check for player1.
-    /// Default: 100 (Riven API max)
+    /// Default: 20 (Development API rate limit is 100 requests per 2 minutes).
     #[clap(short, long, value_name = "COUNT")]
     pub number: Option<i32>,
 
-    /// Enable verbose output, showing full match details.
+    /// Enable verbose output, showing search progression and full match details.
     #[clap(short, long)]
     pub verbose: bool,
 
-    /// Enable silent output, only printing links and a summary.
+    /// Enable silent output, only a summary.
     #[clap(short, long, conflicts_with = "verbose")]
     pub silent: bool,
 
