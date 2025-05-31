@@ -1,25 +1,25 @@
 use clap::Parser;
 use crate::riot_id::RiotId;
-use riven::consts::RegionalRoute; // Keep this import for conversion
+use riven::consts::RegionalRoute;
 
 /// Represents the user-facing regional routes
 #[derive(Debug, Clone)]
 pub enum UserFacingRegion {
-    BR,   // Brazil -> AMERICAS
-    EUNE, // Europe Nordic & East -> EUROPE
-    EUW,  // Europe West -> EUROPE
-    JP,   // Japan -> ASIA
-    KR,   // Korea -> ASIA
-    LAN,  // Latin America North -> AMERICAS
-    LAS,  // Latin America South -> AMERICAS
-    ME,   // Middle East -> EUROPE (Note: RIOT API may have specific ME RegionalRoute in future)
-    NA,   // North America -> AMERICAS
-    OCE,  // Oceania -> AMERICAS (Note: RIOT API may have specific OCE RegionalRoute in future)
-    RU,   // Russia -> EUROPE
-    SEA,  // Southeast Asia -> ASIA
-    TR,   // Turkey -> EUROPE (This is PlatformRoute::TR, maps to RegionalRoute::EUROPE)
-    TW,   // Taiwan -> ASIA
-    VN,   // Vietnam -> ASIA
+    BR,
+    EUNE,
+    EUW,
+    JP,
+    KR,
+    LAN,
+    LAS,
+    ME,
+    NA,
+    OCE,
+    RU,
+    SEA,
+    TR,
+    TW,
+    VN,
 }
 
 impl std::str::FromStr for UserFacingRegion {
@@ -58,9 +58,9 @@ impl UserFacingRegion {
             UserFacingRegion::KR => RegionalRoute::ASIA,
             UserFacingRegion::LAN => RegionalRoute::AMERICAS,
             UserFacingRegion::LAS => RegionalRoute::AMERICAS,
-            UserFacingRegion::ME => RegionalRoute::EUROPE, // RIOT API sometimes maps ME to EUROPE
+            UserFacingRegion::ME => RegionalRoute::EUROPE,
             UserFacingRegion::NA => RegionalRoute::AMERICAS,
-            UserFacingRegion::OCE => RegionalRoute::AMERICAS, // RIOT API sometimes maps OCE to AMERICAS
+            UserFacingRegion::OCE => RegionalRoute::AMERICAS,
             UserFacingRegion::RU => RegionalRoute::EUROPE,
             UserFacingRegion::SEA => RegionalRoute::ASIA,
             UserFacingRegion::TR => RegionalRoute::EUROPE,
@@ -68,11 +68,38 @@ impl UserFacingRegion {
             UserFacingRegion::VN => RegionalRoute::ASIA,
         }
     }
+
+    /// Converts UserFacingRegion to its lowercase string representation for League of Graphs links.
+    pub fn to_log_string(&self) -> &'static str {
+        match self {
+            UserFacingRegion::BR => "br",
+            UserFacingRegion::EUNE => "eune",
+            UserFacingRegion::EUW => "euw",
+            UserFacingRegion::JP => "jp",
+            UserFacingRegion::KR => "kr",
+            UserFacingRegion::LAN => "lan",
+            UserFacingRegion::LAS => "las",
+            UserFacingRegion::ME => "me",
+            UserFacingRegion::NA => "na",
+            UserFacingRegion::OCE => "oce",
+            UserFacingRegion::RU => "ru",
+            UserFacingRegion::SEA => "sea",
+            UserFacingRegion::TR => "tr",
+            UserFacingRegion::TW => "tw",
+            UserFacingRegion::VN => "vn",
+        }
+    }
 }
 
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
+#[clap(
+    about = "A CLI tool to check if two Riot IDs played together.",
+    long_about = "PlayedTogether helps you quickly determine if two League of Legends or Valorant players\n\
+                  have recently played in the same match.\n\n\
+                  You can specify Riot IDs directly, set a default 'self' ID, and control output verbosity."
+)]
 pub struct Cli {
     /// Sets the "self" Riot ID for subsequent calls (e.g., MainingYourMom#4444)
     #[clap(long = "self", value_name = "RIOT_ID")]
@@ -85,18 +112,22 @@ pub struct Cli {
     pub riot_ids: Vec<RiotId>,
 
     #[clap(
-        long, 
+        long,
         value_name = "REGION_OVERRIDE",
-        help = "Specify the Regional Route to use for the query. Supported values: \nBR, EUNE, EUW, JP, KR, LAN, LAS, ME, NA, OCE, RU, SEA, TR, TW, VN",
+        help = "Specify the Regional Route (e.g., EUW, NA, KR).\n\
+                Overrides --default-region if both are specified.\n\
+                Supported:\n    BR, EUNE, EUW, JP, KR, LAN, LAS, ME, NA, OCE, RU, SEA, TR, TW, VN"
     )]
-    pub region: Option<UserFacingRegion>, // <-- Change type to UserFacingRegion
+    pub region: Option<UserFacingRegion>,
 
     #[clap(
-        long, 
+        long,
         value_name = "DEFAULT_REGION",
-        help = "Set a default Regional Route to use if --region is not specified. Defaults to EUROPE if neither --region nor --default-region are specified. Supported values: \nBR, EUNE, EUW, JP, KR, LAN, LAS, ME, NA, OCE, RU, SEA, TR, TW, VN"
+        help = "Set a default Regional Route to use if --region is not specified.\n\
+                Defaults to EUROPE if neither --region nor --default-region are specified.\n\
+                Supported:\n    BR, EUNE, EUW, JP, KR, LAN, LAS, ME, NA, OCE, RU, SEA, TR, TW, VN"
     )]
-    pub default_region: Option<UserFacingRegion>, // <-- Change type to UserFacingRegion
+    pub default_region: Option<UserFacingRegion>,
 
     /// Enable verbose output, showing full match details.
     #[clap(short, long)]
