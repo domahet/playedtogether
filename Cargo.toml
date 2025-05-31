@@ -1,6 +1,6 @@
 [package]
 name = "ptg"
-version = "0.2.3"
+version = "0.2.4"
 edition = "2024"
 description = "A tool for fetching Riot APIs and determine if two League of Legends players have played together recently or not"
 repository = "https://github.com/domahet/playedtogether/"

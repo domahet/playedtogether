@@ -116,7 +116,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 summary.player1_wins_together_count, summary.player1.game_name, summary.player1.tag_line
             );
 
-            if cli.silent {
+            if !cli.silent && !cli.verbose {
                 println!("\n--- Found Game Links ---");
                 if found_matches.is_empty() {
                     println!("No games found together.");
