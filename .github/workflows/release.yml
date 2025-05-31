@@ -22,8 +22,8 @@ jobs:
         targets: |
           x86_64-unknown-linux-gnu
           x86_64-pc-windows-msvc
-          x86_64-apple-darwin # macOS Intel
-          aarch64-apple-darwin # macOS Apple Silicon
+          x86_64-apple-darwin
+          aarch64-apple-darwin
 
     - name: Install cross
       run: cargo install cross --git https://github.com/cross-rs/cross --tag v0.2.5
