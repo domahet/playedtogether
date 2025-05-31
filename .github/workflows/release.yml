@@ -1,0 +1,80 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Rust
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        targets: |
+          x86_64-unknown-linux-gnu
+          x86_64-pc-windows-msvc
+          x86_64-apple-darwin # macOS Intel
+          aarch64-apple-darwin # macOS Apple Silicon
+
+    - name: Install cross
+      run: cargo install cross --git https://github.com/cross-rs/cross --tag v0.2.5
+
+    - name: Build for Linux (glibc)
+      run: cargo build --release --target x86_64-unknown-linux-gnu
+
+    - name: Build for Windows (MSVC)
+      run: cargo build --release --target x86_64-pc-windows-msvc
+
+    - name: Build for macOS (Intel)
+      run: cargo build --release --target x86_64-apple-darwin
+
+    - name: Build for macOS (Apple Silicon)
+      run: cargo build --release --target aarch64-apple-darwin
+
+    - name: Package binaries
+      run: |
+        CRATE_NAME=$(grep name Cargo.toml | head -1 | awk -F '"' '{print $2}')
+        RELEASE_TAG="${GITHUB_REF##*/}" # e.g., v0.2.3
+
+        # Linux
+        mkdir -p target/release/dist
+        mv target/x86_64-unknown-linux-gnu/release/${CRATE_NAME} target/release/dist/${CRATE_NAME}-x86_64-linux-gnu
+        tar -czvf ${CRATE_NAME}-x86_64-linux-gnu-${RELEASE_TAG}.tar.gz -C target/release/dist ${CRATE_NAME}-x86_64-linux-gnu
+
+        # Windows
+        mkdir -p target/x86_64-pc-windows-msvc/release/dist
+        mv target/x86_64-pc-windows-msvc/release/${CRATE_NAME}.exe target/x86_64-pc-windows-msvc/release/dist/${CRATE_NAME}.exe
+        zip -j ${CRATE_NAME}-x86_64-windows-${RELEASE_TAG}.zip target/x86_64-pc-windows-msvc/release/dist/${CRATE_NAME}.exe
+
+        # macOS Intel
+        mkdir -p target/x86_64-apple-darwin/release/dist
+        mv target/x86_64-apple-darwin/release/${CRATE_NAME} target/x86_64-apple-darwin/release/dist/${CRATE_NAME}-x86_64-macos
+        tar -czvf ${CRATE_NAME}-x86_64-macos-${RELEASE_TAG}.tar.gz -C target/x86_64-apple-darwin/release/dist ${CRATE_NAME}-x86_64-macos
+
+        # macOS Apple Silicon
+        mkdir -p target/aarch64-apple-darwin/release/dist
+        mv target/aarch64-apple-darwin/release/${CRATE_NAME} target/aarch64-apple-darwin/release/dist/${CRATE_NAME}-aarch64-macos
+        tar -czvf ${CRATE_NAME}-aarch64-macos-${RELEASE_TAG}.tar.gz -C target/aarch64-apple-darwin/release/dist ${CRATE_NAME}-aarch64-macos
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          *.tar.gz
+          *.zip
+        body: |
+          ## What's new in this release:
+          (Add your release notes here!)
+
+          Download the appropriate binary for your system below.
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
