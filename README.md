@@ -10,6 +10,7 @@ This little utility named `ptg` has been created with exactly these use-cases in
 - A valid Riot [Development API Key](https://developer.riotgames.com/)
 
     - You need to refresh a Development API Key every 24 hours. There are two ways to make this accessible to `ptg`:
+        
     ```sh
     #option 1: use the ptg CLI directly:
     ptg --api-key your_api_key_here
@@ -28,7 +29,9 @@ This little utility named `ptg` has been created with exactly these use-cases in
     set -x RGAPI_KEY "your_api_key_here"
     ```
 
-### Install
+## Install
+
+### Crates.io
 
 With Rust installed you can install the package straight from crates.io using cargo:
 
@@ -36,7 +39,11 @@ With Rust installed you can install the package straight from crates.io using ca
 cargo install --locked ptg
 ```
 
-### Usage
+### Prebuilt binaries
+
+Head over to the [Realeases](https://github.com/domahet/playedtogether/releases) section and grab your .exe that the [smelly nerds](https://www.reddit.com/r/github/comments/1at9br4/i_am_new_to_github_and_i_have_lots_to_say/?share_id=rjJKZS1aIO04c9zK5J3vL&utm_medium=android_app&utm_name=androidcss&utm_source=share&utm_term=1) usually don't provide.
+
+## Usage
 
 You can easily look up two players with a command like this:
  ```sh
