@@ -41,7 +41,7 @@ cargo install --locked ptg
 
 ### Prebuilt binaries
 
-Head over to the [Realeases](https://github.com/domahet/playedtogether/releases) section and grab your .exe that the [smelly nerds](https://www.reddit.com/r/github/comments/1at9br4/i_am_new_to_github_and_i_have_lots_to_say/?share_id=rjJKZS1aIO04c9zK5J3vL&utm_medium=android_app&utm_name=androidcss&utm_source=share&utm_term=1) usually don't provide.
+Alternatively you can head over to the [Releases](https://github.com/domahet/playedtogether/releases) section and grab your .exe that the [smelly nerds](https://www.reddit.com/r/github/comments/1at9br4/i_am_new_to_github_and_i_have_lots_to_say/?share_id=rjJKZS1aIO04c9zK5J3vL&utm_medium=android_app&utm_name=androidcss&utm_source=share&utm_term=1) usually don't provide.
 
 ## Usage
 
