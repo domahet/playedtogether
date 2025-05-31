@@ -2,6 +2,7 @@ use clap::Parser;
 use crate::riot_id::RiotId;
 use riven::consts::RegionalRoute;
 
+
 /// Represents the user-facing regional routes
 #[derive(Debug, Clone)]
 pub enum UserFacingRegion {
@@ -141,4 +142,8 @@ pub struct Cli {
     /// Enable silent output, only printing links and a summary.
     #[clap(short, long, conflicts_with = "verbose")]
     pub silent: bool,
+
+    /// Output results in JSON format.
+    #[arg(short, long, conflicts_with_all = &["silent", "verbose"])]
+    pub json: bool,
 }
