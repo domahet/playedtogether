@@ -71,8 +71,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
                                                .map(|r| r.to_regional_route())
                                                .unwrap_or(RegionalRoute::EUROPE);
 
-    let api_key = env::var("RGAPI_KEY")
-        .expect("RGAPI_KEY environment variable not found. Please set it.");
+    let api_key = if let Some(key_from_config) = config.api_key {
+        key_from_config
+    } else {
+        env::var("RGAPI_KEY")
+            .expect("Riot API key not found. Please set RGAPI_KEY environment variable, or store it using --api-key <YOUR_KEY>.")
+    };
     let riot_api = RiotApi::new(api_key);
 
     let output = run_query(
