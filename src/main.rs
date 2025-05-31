@@ -72,6 +72,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         player2_riot_id,
         regional_route,
         user_selected_region,
+        cli.number,
         cli.verbose,
         cli.silent,
     ).await?;

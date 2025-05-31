@@ -129,6 +129,11 @@ pub struct Cli {
     )]
     pub default_region: Option<UserFacingRegion>,
 
+    /// Number of most recent games to check for player1.
+    /// Default: 100 (Riven API max)
+    #[clap(short, long, value_name = "COUNT")]
+    pub number: Option<i32>,
+
     /// Enable verbose output, showing full match details.
     #[clap(short, long)]
     pub verbose: bool,

@@ -5,6 +5,7 @@ use std::error::Error;
 use std::time::SystemTime;
 use std::time::UNIX_EPOCH;
 use chrono::{TimeZone, Utc};
+use colored::Colorize;
 
 use crate::riot_id::RiotId;
 use crate::utils::print_in_box;
@@ -16,6 +17,8 @@ pub async fn run_query(
     player2_riot_id: RiotId,
     regional_route: RegionalRoute,
     user_selected_region: Option<UserFacingRegion>,
+    number_of_matches: Option<i32>, // MODIFIED LINE
+    // Previous: number_of_matches: Option<u32>,
     verbose: bool,
     silent: bool,
 ) -> Result<(), Box<dyn Error>> {
@@ -72,8 +75,10 @@ pub async fn run_query(
         .map(|t| t.duration_since(UNIX_EPOCH).unwrap().as_secs() as i64);
 
     if verbose {
+        let display_num = number_of_matches.map(|n| n.to_string()).unwrap_or_else(|| "100".to_string());
         println!(
-            "Fetching match IDs for Player 1 (last 100 matches, roughly last 30 days if available)..."
+            "Fetching match IDs for Player 1 (last {} matches, roughly last 30 days if available)...",
+            display_num
         );
     }
     let match_ids = riot_api
@@ -81,7 +86,7 @@ pub async fn run_query(
         .get_match_ids_by_puuid(
             regional_route,
             puuid1,
-            Some(100),
+            number_of_matches,
             None,
             None,
             one_month_ago,
@@ -199,10 +204,13 @@ pub async fn run_query(
                         ));
 
                         lines_of_text.push("--- Match Outcome ---".to_string());
-                        lines_of_text.push(format!(
-                            "  Won the game?: {}",
-                            if p1_data.win { "YES" } else { "NO" }
-                        ));
+                        let outcome_text = if p1_data.win {
+                            "Victory".green().to_string()
+                        } else {
+                            "Defeat".red().to_string()
+                        };
+                        lines_of_text.push(format!("  Outcome: {}", outcome_text));
+
 
                         if !lines_of_text.is_empty() {
                             print_in_box(
@@ -214,7 +222,7 @@ pub async fn run_query(
                         } else {
                             println!("No detailed information available for this match.");
                         }
-                        println!("\n");
+                        println!();
                     }
                     if let Some(link) = leagueofgraphs_link {
                         found_game_links.push(link);
