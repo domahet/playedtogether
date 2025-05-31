@@ -38,6 +38,7 @@ impl From<RiotIdSerializable> for RiotId {
 #[derive(Debug, Serialize, Deserialize, Default)]
 pub struct Config {
     pub self_riot_id: Option<RiotIdSerializable>,
+    pub api_key: Option<String>,
 }
 
 impl Config {

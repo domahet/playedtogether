@@ -106,6 +106,10 @@ pub struct Cli {
     #[clap(long = "self", value_name = "RIOT_ID")]
     pub set_self: Option<RiotId>,
 
+    /// Set and store your Riot API key locally. This key will be used if the RGAPI_KEY environment variable is not found.
+    #[clap(long, value_name = "KEY")]
+    pub api_key: Option<String>,
+
     /// Check if two Riot IDs played together.
     /// player1: The Riot ID whose match history will be checked.
     /// player2: The Riot ID to search for in player1's match history.
