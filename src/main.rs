@@ -4,6 +4,7 @@ use std::env;
 use std::error::Error;
 use std::time::SystemTime;
 use std::time::UNIX_EPOCH;
+use unicode_width::UnicodeWidthStr;
 
 
 #[tokio::main]
@@ -125,6 +126,13 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 info.game_mode, info.game_type
             ));
 
+            if let Some((_region_id, stripped_match_id)) = match_id.split_once('_'){
+                lines_of_text.push(format!(
+                    "https://www.leagueofgraphs.com/match/EUNE/{}", 
+                    stripped_match_id
+                ));
+            }
+            
             // Find participant data for Player 1
             let player1_participant = info.participants.iter()
                 .find(|p| p.puuid == *puuid1);
@@ -178,7 +186,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     }
 
     if !found_together {
-        println!("\n{}#{} and {}#{} do not appear to have played together in the last {} matches checked.",
+        println!("{}#{} and {}#{} do not appear to have played together in the last {} matches checked.",
             player1_game_name, player1_tag_line,
             player2_game_name, player2_tag_line,
             checked_matches
@@ -189,22 +197,26 @@ async fn main() -> Result<(), Box<dyn Error>> {
 }
 
 fn print_in_box(lines: &[&str]) {
-    // 1. Calculate the maximum line length
-    let max_len = lines.iter().map(|s| s.len()).max().unwrap_or(0);
+    // Calculate the maximum line width in terms of displayed columns
+    let max_len = lines.iter()
+                       .map(|s| s.width()) // Use .width() from unicode_width
+                       .max()
+                       .unwrap_or(0);
 
-    // 2. Determine box width (2 for padding + 2 for borders)
-    let box_width = max_len + 4;
+    // Determine box width (2 for padding + 2 for borders)
+    let box_width = max_len + 4; // Still +4 for borders and internal spaces
 
-    // 3. Print the top border
-    println!("{}", "-".repeat(box_width));
+    // Print the top border
+    let horizontal_border = format!(" {} ", "-".repeat(box_width - 2));
+    println!("{}", horizontal_border);
 
-    // 4. Print each line, padded and enclosed
+    // Print each line, padded and enclosed
     for line in lines {
-        // Calculate padding needed for the current line
-        let padding = max_len - line.len();
+        let current_width = line.width(); // Use .width() for the current line
+        let padding = max_len - current_width;
         println!("| {} {} |", line, " ".repeat(padding));
     }
 
-    // 5. Print the bottom border
-    println!("{}", "-".repeat(box_width));
+    // Print the bottom border
+    println!("{}", horizontal_border);
 }
